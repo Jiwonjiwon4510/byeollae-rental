@@ -290,6 +290,11 @@
   .cal-event.rejected{color:#8A939B;text-decoration:line-through;}
   .cal-event .ev-time{color:#748597;}
   .cal-event .ev-loc{color:var(--navy);font-weight:800;}
+  .cal-loc-label{
+    font-size:9.5px;font-weight:900;color:#fff;background:var(--navy-2);
+    display:inline-block;padding:2px 7px;border-radius:4px;margin:5px 0 3px;
+  }
+  .cal-loc-label:first-child{margin-top:0;}
   .cal-event .ev-name{color:#718091;}
   .cal-event-actions{display:flex;gap:4px;margin:1px 0 4px 9px;}
   .cal-event-actions button{font-size:9px;border:1px solid var(--line);border-radius:4px;padding:2px 5px;cursor:pointer;background:#fff;font-family:inherit;}
@@ -674,7 +679,7 @@
 const SUPABASE_URL = 'https://rjptrmhnjnoxqfbrvbfq.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqcHRybWhuam5veHFmYnJ2YmZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0OTIzMTgsImV4cCI6MjEwNTA2ODMxOH0.27fzbFrGb-BmuPpVCg2vpYmobG9FOSGxkrbCxW8akZk';
 const ADMIN_PIN = 'wkclwldnjs8494!!';   // 관리자만 아는 암호로 바꾸세요
-const SITE_PASSWORD = 'wkcl8494!!';   // 직원들에게 공유할 접속 암호로 바꾸세요
+const SITE_PASSWORD = 'byeollae2026';   // 직원들에게 공유할 접속 암호로 바꾸세요
 /* ===================================== */
 
 (function(){
@@ -832,20 +837,30 @@ function render(){
     const dayEvents = byDate[dateStr] || [];
 
     let eventsHtml = '';
+    const locGroups = {};
     dayEvents.forEach(b=>{
-      const conflicts = dayEvents.filter(o => o.id !== b.id && o.status!=='rejected' && b.status!=='rejected' && o.location === b.location && timesOverlap(b.start,b.end,o.start,o.end));
-      eventsHtml += `
-        <div class="cal-event ${b.status}">
-          <span class="ev-time">${b.start}–${b.end}</span> <span class="ev-loc">[${escapeHtml(b.location||'미지정')}]</span>${conflicts.length ? ' <span style="color:var(--rust);">겹침</span>' : ''}<br>
-          ${escapeHtml(b.purpose)} <span class="ev-name">(${escapeHtml(b.requester)})</span>
-        </div>`;
-      if(isAdmin){
-        eventsHtml += `<div class="cal-event-actions">
-              ${b.status !== 'approved' ? `<button class="approve-btn" data-id="${b.id}" data-action="approved">승인</button>` : ''}
-              ${b.status !== 'rejected' ? `<button class="reject-btn" data-id="${b.id}" data-action="rejected">반려</button>` : ''}
-              <button class="del-btn" data-id="${b.id}" data-action="delete">삭제</button>
-            </div>`;
-      }
+      const loc = b.location || '미지정';
+      (locGroups[loc] = locGroups[loc] || []).push(b);
+    });
+    const locOrder = Object.keys(locGroups).sort((a,b)=>a.localeCompare(b,'ko'));
+
+    locOrder.forEach(loc=>{
+      eventsHtml += `<div class="cal-loc-label">${escapeHtml(loc)}</div>`;
+      locGroups[loc].forEach(b=>{
+        const conflicts = dayEvents.filter(o => o.id !== b.id && o.status!=='rejected' && b.status!=='rejected' && o.location === b.location && timesOverlap(b.start,b.end,o.start,o.end));
+        eventsHtml += `
+          <div class="cal-event ${b.status}">
+            <span class="ev-time">${b.start}–${b.end}</span>${conflicts.length ? ' <span style="color:var(--rust);">겹침</span>' : ''}<br>
+            ${escapeHtml(b.purpose)} <span class="ev-name">(${escapeHtml(b.requester)})</span>
+          </div>`;
+        if(isAdmin){
+          eventsHtml += `<div class="cal-event-actions">
+                ${b.status !== 'approved' ? `<button class="approve-btn" data-id="${b.id}" data-action="approved">승인</button>` : ''}
+                ${b.status !== 'rejected' ? `<button class="reject-btn" data-id="${b.id}" data-action="rejected">반려</button>` : ''}
+                <button class="del-btn" data-id="${b.id}" data-action="delete">삭제</button>
+              </div>`;
+        }
+      });
     });
 
     html += `<div class="cal-cell ${outside?'outside':''} ${isToday?'is-today':''}">
