@@ -184,13 +184,13 @@
 
   form{display:flex;flex-direction:column;gap:13px;position:sticky;top:18px;}
   label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:#526579;font-weight:700;}
-  input,textarea{
+  input,textarea,select{
     width:100%;
     font-family:inherit;font-size:13px;color:var(--ink);
     border:1px solid #D7E1E8;border-radius:7px;padding:10px 11px;
     background:#FBFCFD;outline:none;transition:.15s;
   }
-  input:focus,textarea:focus{border-color:var(--navy-2);background:#fff;box-shadow:0 0 0 3px rgba(33,76,140,.08);}
+  input:focus,textarea:focus,select:focus{border-color:var(--navy-2);background:#fff;box-shadow:0 0 0 3px rgba(33,76,140,.08);}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
   textarea{resize:vertical;min-height:52px;}
   button.submit{
@@ -412,7 +412,7 @@
     gap:10px;
   }
   .booking-panel label{font-size:11px;}
-  .booking-panel input,.booking-panel textarea{
+  .booking-panel input,.booking-panel textarea,.booking-panel select{
     font-size:12px;
     padding:8px 9px;
   }
@@ -641,7 +641,12 @@
               <label>시작 시간<input type="time" id="f_start" required></label>
               <label>종료 시간<input type="time" id="f_end" required></label>
             </div>
-            <label>장소<input type="text" id="f_location" placeholder="예: 대회의실" required></label>
+            <label>장소<select id="f_location" required>
+              <option value="">선택하세요</option>
+              <option value="대회의실">대회의실</option>
+              <option value="커뮤니티룸">커뮤니티룸</option>
+              <option value="별내다락">별내다락</option>
+            </select></label>
             <label>신청자<input type="text" id="f_requester" placeholder="이름" required></label>
             <label>용도<input type="text" id="f_purpose" placeholder="예: 팀 워크숍" required></label>
             <label>비고<textarea id="f_note" placeholder="선택 사항"></textarea></label>
@@ -666,7 +671,7 @@
       </div>
       <div id="scheduleList"></div>
       <div class="notice">
-        등록한 일정은 관리자가 승인하기 전까지 "갈색 동그라미" 상태로 표시돼요. 승인 후 초록 동그라미로 변경됩니다.
+        등록한 일정은 관리자가 승인하기 전까지 "승인 대기" 상태로 표시돼요. 
       </div>
     </main>
 
@@ -750,11 +755,19 @@ async function refresh(){
 }
 
 let calYear, calMonth; // calMonth: 0-11
+let dateFieldTouched = false;
 
 function initCalDate(){
   const now = new Date();
   calYear = now.getFullYear();
   calMonth = now.getMonth();
+}
+
+function syncDateFieldToCalendar(){
+  const dateInput = document.getElementById('f_date');
+  if(!dateInput || dateFieldTouched) return;
+  const mm = String(calMonth+1).padStart(2,'0');
+  dateInput.value = `${calYear}-${mm}-01`;
 }
 
 
@@ -790,6 +803,7 @@ function render(){
   const listEl = document.getElementById('scheduleList');
   const countEl = document.getElementById('countLabel');
   document.getElementById('calTitle').textContent = `${calYear}년 ${calMonth+1}월`;
+  syncDateFieldToCalendar();
 
   if(bookings.length === 0){
     countEl.textContent = '';
@@ -942,12 +956,16 @@ document.getElementById('bookingForm').addEventListener('submit', async (e)=>{
   }else{
     await refresh();
     document.getElementById('bookingForm').reset();
+    dateFieldTouched = false;
+    syncDateFieldToCalendar();
     msg.textContent = '등록됐어요. 관리자 승인을 기다려주세요.';
     msg.className = 'form-msg ok';
     setTimeout(()=>{ if(msg.textContent.startsWith('등록됐어요')) msg.textContent=''; }, 3000);
   }
   submitBtn.disabled = false;
 });
+
+document.getElementById('f_date').addEventListener('input', ()=>{ dateFieldTouched = true; });
 
 function updateAdminButton(){
   const btn = document.getElementById('adminToggle');
