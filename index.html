@@ -288,13 +288,31 @@
   .cal-event.pending::before{background:var(--gold);}
   .cal-event.rejected::before{background:#9AA3AB;}
   .cal-event.rejected{color:#8A939B;text-decoration:line-through;}
-  .cal-event .ev-time{color:#748597;}
+  .cal-event .ev-time{color:var(--navy);font-weight:800;}
   .cal-event .ev-loc{color:var(--navy);font-weight:800;}
   .cal-loc-label{
     font-size:9.5px;font-weight:900;color:#fff;background:var(--navy-2);
     display:inline-block;padding:2px 7px;border-radius:4px;margin:5px 0 3px;
   }
   .cal-loc-label:first-child{margin-top:0;}
+
+  .search-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+  .search-row input{flex:1;}
+  .search-row button{
+    background:#fff;border:1px solid var(--line);border-radius:7px;padding:8px 11px;
+    cursor:pointer;color:var(--muted);font-family:inherit;font-size:13px;
+  }
+  .search-row button:hover{border-color:var(--navy-2);color:var(--navy);}
+
+  .cal-event.search-match{
+    background:#E7F0FF;
+    box-shadow:0 0 0 1px #2F6FE0 inset;
+    border-radius:4px;
+  }
+  .cal-event.search-match::before{background:#2F6FE0;}
+  .cal-event.search-match .ev-purpose,
+  .cal-event.search-match .ev-name,
+  .cal-event.search-match .ev-time{color:#1846A3;font-weight:800;}
   .cal-event .ev-name{color:#718091;}
   .cal-event-actions{display:flex;gap:4px;margin:1px 0 4px 9px;}
   .cal-event-actions button{font-size:9px;border:1px solid var(--line);border-radius:4px;padding:2px 5px;cursor:pointer;background:#fff;font-family:inherit;}
@@ -669,6 +687,10 @@
         <button id="nextMonthBtn" type="button">▶</button>
         <button class="today-btn" id="todayBtn" type="button">오늘</button>
       </div>
+      <div class="search-row">
+        <input type="text" id="searchInput" placeholder="검색 (이름, 용도, 장소, 비고)">
+        <button type="button" id="searchClearBtn" title="검색어 지우기">✕</button>
+      </div>
       <div id="scheduleList"></div>
       <div class="notice">
         등록한 일정은 대관 담당자가 승인하기 전까지 "갈색 동그라미" 상태로 표시되고, 승인 후 "초록색 동그라미" 상태로 변경됩니다. 대관신청 공문 必
@@ -756,6 +778,7 @@ async function refresh(){
 
 let calYear, calMonth; // calMonth: 0-11
 let dateFieldTouched = false;
+let searchTerm = '';
 
 function initCalDate(){
   const now = new Date();
@@ -862,10 +885,11 @@ function render(){
       eventsHtml += `<div class="cal-loc-label">${escapeHtml(loc)}</div>`;
       locGroups[loc].forEach(b=>{
         const conflicts = dayEvents.filter(o => o.id !== b.id && o.status!=='rejected' && b.status!=='rejected' && o.location === b.location && timesOverlap(b.start,b.end,o.start,o.end));
+        const searchMatch = searchTerm && [b.purpose,b.requester,b.location,b.note].some(f => (f||'').toLowerCase().includes(searchTerm));
         eventsHtml += `
-          <div class="cal-event ${b.status}">
+          <div class="cal-event ${b.status} ${searchMatch ? 'search-match' : ''}">
             <span class="ev-time">${b.start}–${b.end}</span>${conflicts.length ? ' <span style="color:var(--rust);">겹침</span>' : ''}<br>
-            ${escapeHtml(b.purpose)} <span class="ev-name">(${escapeHtml(b.requester)})</span>
+            <span class="ev-purpose">${escapeHtml(b.purpose)}</span> <span class="ev-name">(${escapeHtml(b.requester)})</span>
           </div>`;
         if(isAdmin){
           eventsHtml += `<div class="cal-event-actions">
@@ -916,6 +940,18 @@ document.getElementById('nextMonthBtn').addEventListener('click', ()=>{
 });
 document.getElementById('todayBtn').addEventListener('click', ()=>{
   initCalDate();
+  render();
+});
+
+document.getElementById('searchInput').addEventListener('input', (e)=>{
+  searchTerm = e.target.value.trim().toLowerCase();
+  render();
+});
+document.getElementById('searchClearBtn').addEventListener('click', ()=>{
+  searchTerm = '';
+  const input = document.getElementById('searchInput');
+  input.value = '';
+  input.focus();
   render();
 });
 
