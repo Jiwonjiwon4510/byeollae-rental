@@ -296,6 +296,24 @@
   }
   .cal-loc-label:first-child{margin-top:0;}
 
+  .stats-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .stat-chip{
+    display:flex;align-items:baseline;gap:5px;padding:8px 13px;border-radius:8px;
+    font-family:inherit;font-size:12.5px;border:1px solid var(--line);background:#FAFAF8;
+    color:var(--muted);cursor:default;
+  }
+  .stat-chip .stat-num{font-size:16px;font-weight:900;color:var(--navy);font-variant-numeric:tabular-nums;}
+  .stat-chip.stat-pending{
+    cursor:pointer;border-color:#E3B75A;background:#FDF3DF;color:#8A6A1A;
+  }
+  .stat-chip.stat-pending .stat-num{color:#B5891A;}
+  .stat-chip.stat-pending:hover{border-color:#C79A2E;background:#FBEAC4;}
+  .stat-chip.stat-pending.has-pending .stat-num{color:#C0392B;}
+  .stat-chip.stat-approved{border-color:#B9DCC8;background:#EEF7F1;color:#2F6F52;}
+  .stat-chip.stat-approved .stat-num{color:#2F6F52;}
+  .stat-chip.stat-rejected{border-color:#E3D6D0;background:#F7F1EE;color:#8A7468;}
+  .stat-chip.stat-rejected .stat-num{color:#8A7468;}
+
   .search-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
   .search-row input{flex:1;}
   .search-row button{
@@ -681,6 +699,20 @@
         <h2 style="margin:0;">전체 일정</h2>
         <span class="count" id="countLabel"></span>
       </div>
+      <div class="stats-bar">
+        <div class="stat-chip stat-total">
+          <span class="stat-num" id="statTotal">0</span><span class="stat-label">건 신청</span>
+        </div>
+        <button type="button" class="stat-chip stat-pending" id="statPendingChip">
+          <span class="stat-num" id="statPending">0</span><span class="stat-label">승인 대기</span>
+        </button>
+        <div class="stat-chip stat-approved">
+          <span class="stat-num" id="statApproved">0</span><span class="stat-label">확정</span>
+        </div>
+        <div class="stat-chip stat-rejected">
+          <span class="stat-num" id="statRejected">0</span><span class="stat-label">반려</span>
+        </div>
+      </div>
       <div class="cal-nav">
         <button id="prevMonthBtn" type="button">◀</button>
         <span class="cal-title" id="calTitle"></span>
@@ -822,11 +854,24 @@ function renderTodaySchedule(){
   `).join('');
 }
 
+function renderStats(){
+  const total = bookings.length;
+  const pending = bookings.filter(b=>b.status==='pending').length;
+  const approved = bookings.filter(b=>b.status==='approved').length;
+  const rejected = bookings.filter(b=>b.status==='rejected').length;
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statPending').textContent = pending;
+  document.getElementById('statApproved').textContent = approved;
+  document.getElementById('statRejected').textContent = rejected;
+  document.getElementById('statPendingChip').classList.toggle('has-pending', pending > 0);
+}
+
 function render(){
   const listEl = document.getElementById('scheduleList');
   const countEl = document.getElementById('countLabel');
   document.getElementById('calTitle').textContent = `${calYear}년 ${calMonth+1}월`;
   syncDateFieldToCalendar();
+  renderStats();
 
   if(bookings.length === 0){
     countEl.textContent = '';
@@ -940,6 +985,23 @@ document.getElementById('nextMonthBtn').addEventListener('click', ()=>{
 });
 document.getElementById('todayBtn').addEventListener('click', ()=>{
   initCalDate();
+  render();
+});
+
+document.getElementById('statPendingChip').addEventListener('click', ()=>{
+  const pendingItems = bookings.filter(b=>b.status==='pending');
+  if(pendingItems.length === 0){
+    alert('승인 대기 중인 일정이 없어요.');
+    return;
+  }
+  const todayS = todayStr();
+  const upcoming = pendingItems.filter(b=>b.date >= todayS).sort((a,b)=> a.date.localeCompare(b.date) || a.start.localeCompare(b.start));
+  const target = upcoming.length ? upcoming[0] : pendingItems.sort((a,b)=> a.date.localeCompare(b.date))[0];
+  const d = parseYMD(target.date);
+  calYear = d.getFullYear();
+  calMonth = d.getMonth();
+  searchTerm = target.requester.toLowerCase();
+  document.getElementById('searchInput').value = target.requester;
   render();
 });
 
