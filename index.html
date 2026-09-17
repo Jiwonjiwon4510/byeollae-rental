@@ -626,7 +626,7 @@
 </div>
 <div class="brand-bar">
   <div class="brand-inner">
-    <div class="slogan">
+    <div class="slogan" id="brandRefresh" title="클릭하면 새로고침" style="cursor:pointer;">
       <div class="slogan-main">별내동 <span class="green">생활자치과</span></div>
     </div>
   </div>
@@ -1134,6 +1134,10 @@ function init(){
     .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => refresh())
     .subscribe();
 }
+document.getElementById('brandRefresh').addEventListener('click', ()=>{
+  location.reload();
+});
+
 init();
 </script>
 </body>
